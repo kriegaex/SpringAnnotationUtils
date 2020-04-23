@@ -16,16 +16,34 @@
 
 package org.springframework.core.annotation;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.springframework.lang.Nullable;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
- * Log facade used to handle annotation introspection failures (in particular
+ * Logger facade used to handle annotation introspection failures (in particular
  * {@code TypeNotPresentExceptions}). Allows annotation processing to continue,
  * assuming that when Class attribute values are not resolvable the annotation
  * should effectively disappear.
+ * <p></p>
+ * This class uses a stadard JRE {@link Logger} created via
+ * {@code Logger.getLogger(MergedAnnotation.class.getName())} with no extra
+ * {@link java.util.logging.Handler Handler} attached. I.e. it inherits its parent's
+ * handler. Normally the parent should be the root logger. So if you want to change
+ * the handler's log level, see {@link java.util.logging.LogManager LogManager} for
+ * how to do that via properties file or command line.
+ * <p></p>
+ * Something like this could work if you want to do it during runtime:
+ * <pre>{@code
+ * // For the logger
+ * Logger myLogger = Logger.getLogger(MergedAnnotation.class.getName())
+ * myLogger.setLevel(Level.FINE);
+ *
+ * // For the parent's handlers
+ * for (Handler handler : myLogger.getParent().getHandlers())
+ *   handler.setLevel(logLevel);
+ * }</pre>
  *
  * @author Phillip Webb
  * @since 5.2
@@ -35,18 +53,18 @@ enum IntrospectionFailureLogger {
 	DEBUG {
 		@Override
 		public boolean isEnabled() {
-			return getLogger().isDebugEnabled();
+			return getLogger().isLoggable(Level.FINE);
 		}
 		@Override
 		public void log(String message) {
-			getLogger().debug(message);
+			getLogger().fine(message);
 		}
 	},
 
 	INFO {
 		@Override
 		public boolean isEnabled() {
-			return getLogger().isInfoEnabled();
+			return getLogger().isLoggable(Level.INFO);
 		}
 		@Override
 		public void log(String message) {
@@ -56,7 +74,7 @@ enum IntrospectionFailureLogger {
 
 
 	@Nullable
-	private static Log logger;
+	private static Logger logger;
 
 
 	void log(String message, @Nullable Object source, Exception ex) {
@@ -69,10 +87,11 @@ enum IntrospectionFailureLogger {
 	abstract void log(String message);
 
 
-	private static Log getLogger() {
-		Log logger = IntrospectionFailureLogger.logger;
+	private static Logger getLogger() {
+		Logger logger = IntrospectionFailureLogger.logger;
 		if (logger == null) {
-			logger = LogFactory.getLog(MergedAnnotation.class);
+			// TODO: Why MergedAnnotation and not IntrospectionFailureLogger? Spring bug?
+			logger = Logger.getLogger(MergedAnnotation.class.getName());
 			IntrospectionFailureLogger.logger = logger;
 		}
 		return logger;

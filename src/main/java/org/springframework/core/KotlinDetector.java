@@ -17,9 +17,7 @@
 package org.springframework.core;
 
 import java.lang.annotation.Annotation;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.logging.Logger;
 
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
@@ -34,7 +32,7 @@ import org.springframework.util.ClassUtils;
 @SuppressWarnings("unchecked")
 public abstract class KotlinDetector {
 
-	private static final Log logger = LogFactory.getLog(KotlinDetector.class);
+	private static final Logger logger = Logger.getLogger(KotlinDetector.class.getName());
 
 	@Nullable
 	private static final Class<? extends Annotation> kotlinMetadata;
