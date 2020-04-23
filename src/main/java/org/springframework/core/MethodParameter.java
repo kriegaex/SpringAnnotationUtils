@@ -28,12 +28,6 @@ import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Predicate;
-
-import kotlin.Unit;
-import kotlin.reflect.KFunction;
-import kotlin.reflect.KParameter;
-import kotlin.reflect.jvm.ReflectJvmMapping;
 
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -394,17 +388,17 @@ public class MethodParameter {
 
 	/**
 	 * Return whether this method indicates a parameter which is not required:
-	 * either in the form of Java 8's {@link java.util.Optional}, any variant
+	 * either in the form of Java 8's {@link java.util.Optional} or any variant
 	 * of a parameter-level {@code Nullable} annotation (such as from JSR-305
-	 * or the FindBugs set of annotations), or a language-level nullable type
-	 * declaration or {@code Continuation} parameter in Kotlin.
+	 * or the FindBugs set of annotations).
+	 * <p></p>
+	 * <b>Attention:</b> Compared to the up-stream Spring version, Kotlin-specific
+	 * capabilities in this method have been removed so as to eliminate the Kotlin
+	 * dependency.
 	 * @since 4.3
 	 */
 	public boolean isOptional() {
-		return (getParameterType() == Optional.class || hasNullableAnnotation() ||
-				(KotlinDetector.isKotlinReflectPresent() &&
-						KotlinDetector.isKotlinType(getContainingClass()) &&
-						KotlinDelegate.isOptional(this)));
+		return (getParameterType() == Optional.class || hasNullableAnnotation());
 	}
 
 	/**
@@ -425,6 +419,10 @@ public class MethodParameter {
 	 * Return a variant of this {@code MethodParameter} which points to
 	 * the same parameter but one nesting level deeper in case of a
 	 * {@link java.util.Optional} declaration.
+	 * <p></p>
+	 * <b>Attention:</b> Compared to the up-stream Spring version, Kotlin-specific
+	 * capabilities in this method have been removed so as to eliminate the Kotlin
+	 * dependency.
 	 * @since 4.3
 	 * @see #isOptional()
 	 * @see #nested()
@@ -478,6 +476,10 @@ public class MethodParameter {
 
 	/**
 	 * Return the type of the method/constructor parameter.
+	 * <p></p>
+	 * <b>Attention:</b> Compared to the up-stream Spring version, Kotlin-specific
+	 * capabilities in this method have been removed so as to eliminate the Kotlin
+	 * dependency.
 	 * @return the parameter type (never {@code null})
 	 */
 	public Class<?> getParameterType() {
@@ -498,6 +500,10 @@ public class MethodParameter {
 	/**
 	 * Return the generic type of the method/constructor parameter.
 	 * @return the parameter type (never {@code null})
+	 * <p></p>
+	 * <b>Attention:</b> Compared to the up-stream Spring version, Kotlin-specific
+	 * capabilities in this method have been removed so as to eliminate the Kotlin
+	 * dependency.
 	 * @since 3.0
 	 */
 	public Type getGenericParameterType() {
@@ -505,9 +511,7 @@ public class MethodParameter {
 		if (paramType == null) {
 			if (this.parameterIndex < 0) {
 				Method method = getMethod();
-				paramType = (method != null ?
-						(KotlinDetector.isKotlinReflectPresent() && KotlinDetector.isKotlinType(getContainingClass()) ?
-						KotlinDelegate.getGenericReturnType(method) : method.getGenericReturnType()) : void.class);
+				paramType = method != null ? method.getGenericReturnType() : void.class;
 			}
 			else {
 				Type[] genericParameterTypes = this.executable.getGenericParameterTypes();
@@ -528,14 +532,16 @@ public class MethodParameter {
 		return paramType;
 	}
 
+	/**
+	 * <b>Attention:</b> Compared to the up-stream Spring version, Kotlin-specific
+	 * capabilities in this method have been removed so as to eliminate the Kotlin
+	 * dependency.
+	 */
 	private Class<?> computeParameterType() {
 		if (this.parameterIndex < 0) {
 			Method method = getMethod();
 			if (method == null) {
 				return void.class;
-			}
-			if (KotlinDetector.isKotlinReflectPresent() && KotlinDetector.isKotlinType(getContainingClass())) {
-				return KotlinDelegate.getReturnType(method);
 			}
 			return method.getReturnType();
 		}
@@ -544,6 +550,10 @@ public class MethodParameter {
 
 	/**
 	 * Return the nested type of the method/constructor parameter.
+	 * <p></p>
+	 * <b>Attention:</b> Compared to the up-stream Spring version, Kotlin-specific
+	 * capabilities in this method have been removed so as to eliminate the Kotlin
+	 * dependency.
 	 * @return the parameter type (never {@code null})
 	 * @since 3.1
 	 * @see #getNestingLevel()
@@ -857,92 +867,6 @@ public class MethodParameter {
 		Assert.isTrue(parameterIndex >= -1 && parameterIndex < count,
 				() -> "Parameter index needs to be between -1 and " + (count - 1));
 		return parameterIndex;
-	}
-
-
-	/**
-	 * Inner class to avoid a hard dependency on Kotlin at runtime.
-	 */
-	private static class KotlinDelegate {
-
-		/**
-		 * Check whether the specified {@link MethodParameter} represents a nullable Kotlin type,
-		 * an optional parameter (with a default value in the Kotlin declaration) or a
-		 * {@code Continuation} parameter used in suspending functions.
-		 */
-		public static boolean isOptional(MethodParameter param) {
-			Method method = param.getMethod();
-			int index = param.getParameterIndex();
-			if (method != null && index == -1) {
-				KFunction<?> function = ReflectJvmMapping.getKotlinFunction(method);
-				return (function != null && function.getReturnType().isMarkedNullable());
-			}
-			KFunction<?> function;
-			Predicate<KParameter> predicate;
-			if (method != null) {
-				if (param.getParameterType().getName().equals("kotlin.coroutines.Continuation")) {
-					return true;
-				}
-				function = ReflectJvmMapping.getKotlinFunction(method);
-				predicate = p -> KParameter.Kind.VALUE.equals(p.getKind());
-			}
-			else {
-				Constructor<?> ctor = param.getConstructor();
-				Assert.state(ctor != null, "Neither method nor constructor found");
-				function = ReflectJvmMapping.getKotlinFunction(ctor);
-				predicate = p -> (KParameter.Kind.VALUE.equals(p.getKind()) ||
-						KParameter.Kind.INSTANCE.equals(p.getKind()));
-			}
-			if (function != null) {
-				int i = 0;
-				for (KParameter kParameter : function.getParameters()) {
-					if (predicate.test(kParameter)) {
-						if (index == i++) {
-							return (kParameter.getType().isMarkedNullable() || kParameter.isOptional());
-						}
-					}
-				}
-			}
-			return false;
-		}
-
-		/**
-		 * Return the generic return type of the method, with support of suspending
-		 * functions via Kotlin reflection.
-		 */
-		static private Type getGenericReturnType(Method method) {
-			try {
-				KFunction<?> function = ReflectJvmMapping.getKotlinFunction(method);
-				if (function != null && function.isSuspend()) {
-					return ReflectJvmMapping.getJavaType(function.getReturnType());
-				}
-			}
-			catch (UnsupportedOperationException ex) {
-				// probably a synthetic class - let's use java reflection instead
-			}
-			return method.getGenericReturnType();
-		}
-
-		/**
-		 * Return the return type of the method, with support of suspending
-		 * functions via Kotlin reflection.
-		 */
-		static private Class<?> getReturnType(Method method) {
-			try {
-				KFunction<?> function = ReflectJvmMapping.getKotlinFunction(method);
-				if (function != null && function.isSuspend()) {
-					Type paramType = ReflectJvmMapping.getJavaType(function.getReturnType());
-					if (paramType == Unit.class) {
-						paramType = void.class;
-					}
-					return ResolvableType.forType(paramType).resolve(method.getReturnType());
-				}
-			}
-			catch (UnsupportedOperationException ex) {
-				// probably a synthetic class - let's use java reflection instead
-			}
-			return method.getReturnType();
-		}
 	}
 
 }
