@@ -1,6 +1,25 @@
-# How to create a project with minimal source files from a dependency of interest
+# Spring annotation utilities (self-contained)
 
-## Preface
+This is basically a re-packaged version of Spring's annotation utilities with classes such as `AnnotationUtils` and
+`MergedAnnotations`. They have the same package and class names and can be used as drop-in replacements for the
+originals based on Spring version `5.2.5.RELEASE`. They have been extracted from Spring Core and recompiled to run
+outside of Spring infrastructure. You can use them in any POJO project. The dependency on Spring's JCL logging bridge
+has also been removed. The library uses the Java logging framework instead.
+
+There are two variants:
+  * The `master` branch keeps the dependency on the Kotlin core and reflection libraries, utilising their capabilities
+    for retaining the up-stream library's Kotlin support for
+      * optionals, nullable Kotlin types,
+      * determining generic return types (with support of suspending functions) and
+      * normal method return types (also with support of suspending functions).
+  * The `no-kotlin` branch completely removes Kotlin dependencies along with the special capabilities mentiones above.
+
+Both variants retain support for JSR 305 `@Nonnull` when determining (non-) nullability. Thus there still is a
+dependency on the Google Findbugs JSR 305 annotation library.
+
+## How I built this library (template for your own project)
+
+### Preface
 
 Lately someone mentioned Spring's `AnnotationUtils` on StackOverflow, mentioning how to conveniently get access to
 annotations from a class, even including annotations from all implemented interfaces and meta annotations
@@ -21,18 +40,18 @@ You may wonder: Why the effort and not just be happy with the minimised JAR? Wel
 source code, for example prune it further down to my needs, possibly removing unneeded features, minimising the list of
 dependency classes to what I really need for my purposes. For example:
 
+* If I eliminate Spring's usage of JCL (Jakarta Commons Logging) classes and either remove all logging code or replace
+  it by `System.out.println()` or Java logging framework instead, I can eliminate the Spring JCL bridge dependency.
 * There is some code to handle Kotlin annotations. If I decide that I do not need that because I program in Java and
   write tests in Groovy (I love Spock and Geb), I can get rid of those lines of code and eliminate the dependency on the
   Kotlin standard library and Kotlin reflection tools.
 * The same is true if I do not need information about `Nullable` classes or can live without the Spring classes 
   themselves using that annotation. Then I can also get rid of the Google Findbugs JSR 305 dependency.
-* If I also replace Spring's usage of Commons Logging classes and remove logging code or replace it by
-  `System.out.println()`, I can eliminate the Spring JCL dependency.
 
 So here is what I did. You can use it as a template for your own project, which is why I am describing it in the first
 place:
 
-## Create project with dummy class using dependency classes of interest
+### Create project with dummy class using dependency classes of interest
 
 First add dependency of interest to your project's POM:
 
@@ -56,7 +75,7 @@ public class Foo {
 }
 ```
 
-## Create minimised binary JAR
+### Create minimised binary JAR
 
 Then make sure you create a minimised JAR like this:
 
@@ -83,7 +102,7 @@ Optionally, it might be a good idea to check if the minimised JAR can be used in
 dependencies) from another project without problems. If the compiler complains about missing classes there, chances are
 that you need to add transitive dependencies to that project or extract additional classes from them. 
 
-## Find source files for classes from minimised JAR
+### Find source files for classes from minimised JAR
 
 Now copy the minimised JAR as well as the source JAR(s) to a work directory and unpack all source files corresponding to
 the class files in the minimised JAR:
@@ -108,7 +127,7 @@ For each `filename not matched` warning you
 
 What you want do in this case mostly depends on how self-contained you want your new JAR to be. 
 
-## Move sources into own project and make it compile
+### Move sources into own project and make it compile
 
 Finally
 * move all unpacked source files into your project's source tree,
@@ -121,7 +140,7 @@ Finally
 If after that you want to do some clean-up work in the source files in order to remove unneeded functionality and maybe
 get rid of some more dependency classes or JARs is up to you.
 
-## Final remarks
+### Final remarks
 
 Of course this method is neither fully automated nor perfect. If e.g. the minimised JAR is incomplete because some
 classes are not imported directly but loaded via reflection magic, you might have to do additional manual work, such as
