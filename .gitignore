@@ -1,0 +1,14 @@
+# Maven
+target/
+/dependency-reduced-pom.xml
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Eclipse
+.settings/
+.project
+
+# Others
+/*.jar
