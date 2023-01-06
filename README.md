@@ -12,7 +12,7 @@ There are two variants:
       * optionals, nullable Kotlin types,
       * determining generic return types (with support of suspending functions) and
       * normal method return types (also with support of suspending functions).
-  * The `no-kotlin` branch completely removes Kotlin dependencies along with the special capabilities mentiones above.
+  * The `no-kotlin` branch completely removes Kotlin dependencies along with the special capabilities mentioned above.
 
 Both variants retain support for JSR 305 `@Nonnull` when determining (non-) nullability. Thus there still is a
 dependency on the Google Findbugs JSR 305 annotation library.
@@ -134,7 +134,7 @@ Finally
 * deactivate the Maven Shade minimiser in your POM as it is no longer needed (instead of `<phase>package</phase>` you
   can just use `<phase>none</phase>`),
 * deactivate the maven dependency on the original JAR because we want to find out if the project still compiles without
-  it. If it does not, maybe you forgot to take care of the `filename not matched` stuff mentiones above. Go double-check
+  it. If it does not, maybe you forgot to take care of the `filename not matched` stuff mentioned above. Go double-check
   until the project compiles.
 
 If after that you want to do some clean-up work in the source files in order to remove unneeded functionality and maybe
